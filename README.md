@@ -51,25 +51,32 @@ ls /var
 ````
 !["После перезагрузки"](https://github.com/mus-cat/otus-study-m1l3/blob/main/07.reboot.png)
 
-- Создаем создаем несколько файлов в папке /home и вычисляем их md5 суммы сохранив в файл (дальше с их помощью проверим, что файлы из 
-snapshot-тома восстановились корректно) (см. рис 08)
+- Создаем несколько файлов в папке **/home** и вычисляем их md5 суммы сохранив в файл **fSum.md5** (дальше с их помощью проверим, что файлы из 
+snapshot-тома восстановились корректно)
 ```
 cd /home
 for i in 1 2 3; do dd if=/dev/urandom of="$i.img" bs=1M count=100; done
 md5sum *.img > fSum.md5
 ```
+!["Создаем тестовые файлы"](https://github.com/mus-cat/otus-study-m1l3/blob/main/08.makeFilesInHome.png)
 
-- Создаём snapshot текущего состояния тома содержащего /home. Затем изменяем файлы созданные на шаге 6 (см. рис 09 и 10)
+- Создаём snapshot текущего состояния тома смонтированного в **/home**.  (см. рис 09 и 10)
 ```
 lvcreate -s -n home-snap -L 1G /dev/mapper/4test01-home
 lvs
 lsblk
+```
+!["Создаем snapshot"](https://github.com/mus-cat/otus-study-m1l3/blob/main/09.makeSnap.png)
+
+- Затем изменяем файлы созданные ранее
+```
 rm 1.img
 echo "Additional text" >> 2.img
 truncate -s 10M 3.img
 dd if=/dev/urandom count=90 bs=10M >> 3.img
 md5sum -c fSum.md5
 ```
+!["Изменяем файлы"](https://github.com/mus-cat/otus-study-m1l3/blob/main/10.corruptFileInHome.png)
 
 - Монтируем snapshot и проверяем, что в нем файлы видны неизмененными (см. рис 11)
 ```
@@ -77,13 +84,11 @@ mount /dev/4test01/home-snap /mnt
 cd /mnt
 md5sum -c fSum.md5
 ```
+!["Проверяем как данные видны при монтировании snapshot"](https://github.com/mus-cat/otus-study-m1l3/blob/main/11.mountSnapshot.png)
 
-- Восстанавливаем том из snapshot и проверяем, что все хорошо(см. рис 11). Т.к. исходный LV был смонтирован и испольовался, то 
-процесс сразу не запустился, он был отложен до момент, когда LV будет повторно активирован. Чтобы достичь данного эффекта, необходимо 
-было отмонтировать устройство /dev/4test01/home-snap, а затем последовательно деактивировать (lvchange -an ...) и активировать 
-(lvchange -ay ...) его. В заключении необходимо смонтировать устройство обратно в /home. Для проверки использовали сохраненные md5 
-суммы файлов. В результате слияния snapshota с исходным LV, первый исчезает, что видно по выводу команды lsblk. (см. рис 12)
+- Восстанавливаем том из snapshot и проверяем, что все хорошо. Т.к. исходный LV был смонтирован и использовался, то процесс сразу не запустился, он был отложен до момент, когда LV будут повторно активирован и не смонтрованны. Для запуска процесса слияния, необходимо было отмонтировать устройства **/dev/4test01/home-snap** и **/dev/4test01/home**, а затем последовательно деактивировать (``lvchange -an ...``) и активировать (``lvchange -ay ...``) одно из них. В заключении смонтировали устройство **/dev/4test01/home** обратно в **/home**. Для проверки использовали сохраненные md5 суммы файлов. В результате слияния snapshota с исходным LV, первый исчезает, что видно по выводу команды **lsblk**.
 ```
+umount /mnt
 lvconvert --merge /dev/4test01/home-snap
 umount /home
 lvchange -an /dev/4test01/home
@@ -93,3 +98,5 @@ cd /home
 md5sum -c fSum.md5
 lsblk
 ```
+!["Слияние и проверка"](https://github.com/mus-cat/otus-study-m1l3/blob/main/12.mergeSnapshot.png)
+

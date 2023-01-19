@@ -149,6 +149,7 @@ zpool set listsnaps=on datapool
 zfs list
 ````
 ![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/19.createData.png)
+![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/20.listFreshSnap.png)
 
 16. "Портим" данные. Смотрим состояние снапшёта.
 ```
@@ -159,8 +160,6 @@ ls -lh
 md5sum -c fSum.md5
 zfs list
 ```
-![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/20.listFreshSnap.png)
-
 17. Восттанавливаем данные и снапшёта, причём последний остаётся хотя и уменьшившийся в размерез
 ```
 zfs rollback datapool@snap1

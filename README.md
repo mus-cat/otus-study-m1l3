@@ -160,6 +160,7 @@ ls -lh
 md5sum -c fSum.md5
 zfs list
 ```
+!["Портим данные"](https://github.com/mus-cat/otus-study-m1l3/blob/main/20.5.mangleData.png)
 17. Восттанавливаем данные и снапшёта, причём последний остаётся хотя и уменьшившийся в размерез
 ```
 zfs rollback datapool@snap1

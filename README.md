@@ -101,3 +101,69 @@ lsblk
 ```
 !["Слияние и проверка"](https://github.com/mus-cat/otus-study-m1l3/blob/main/12.mergeSnapshot.png)
 
+
+## ПО ZFS
+- Установливаем модули ядра для zfs. Так же в процессе будут устанволены пакеты длс сборки софта (компиляторы, линкеры, заголовочные файлы, рзные исходники, библиотеки и т.п.)
+```apt install zfs-dkms```
+!["Устанавливаем ZFS"](https://github.com/mus-cat/otus-study-m1l3/blob/main/13.InstallZFS.png)
+
+- После того как процесс сборки модулей ядра закончился, подгружаем модуль zfs, остальные необходимые модули подтянутся автоматически
+```
+modprobe zfs
+lsmod | grep zfs
+```
+!["Модули ZFS"](https://github.com/mus-cat/otus-study-m1l3/blob/main/14.listZFSModule.png)
+
+- Создаем простой pool Из двух дисков. 
+```
+zpool create -f datapool /dev/sdb /dev/sdc
+zpool list
+lsblk
+```
+!["Создание пула"](https://github.com/mus-cat/otus-study-m1l3/blob/main/15.CreateSimpleZFSPool.png)
+
+13. Добавляем квази кеш чтения (L2ARC) и запичи (ZIL)
+```
+zpool add -f datapool cache /dev/sdd
+zpool add -f datapool log  /dev/sde
+```
+!["Создание кэшей"](https://github.com/mus-cat/otus-study-m1l3/blob/main/16.addL2ARCandZIL.png)
+
+
+14. Монтируем ZFS в /opt
+```
+zfs set mountpoint=/opt datapool
+mount
+```
+!["монтирование в opt"](https://github.com/mus-cat/otus-study-m1l3/blob/main/17.moveZFStoOPT.png)
+!["монтирование в opt"](https://github.com/mus-cat/otus-study-m1l3/blob/main/18.mountResult.png)
+
+15. Создаем данные и делаем снапшот. Для того, чтобы команда zfs list показывала снапшёты, необходиом на уровне пула установить свойство listsnaps
+```
+for i in 1 2 3; do dd if=/dev/urandom of=/opt/$i.rnd bs=10M count=10; done
+ls /opt
+cd /opt
+md5sum ./* > fSum.md5
+zfs snapshot datapool@snap1
+zpool set listsnaps=on datapool
+zfs list
+````
+![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/19.createData.png)
+
+16. "Портим" данные. Смотрим состояние снапшёта.
+```
+rm 1.rnd
+echo "aasdasdasd" >> 2.rnd
+dd if=/dev/urandom count=1 bs=1M of=/opt/3.rnd seek=10
+ls -lh
+md5sum -c fSum.md5
+zfs list
+```
+![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/20.listFreshSnap.png)
+
+17. Восттанавливаем данные и снапшёта, причём последний остаётся хотя и уменьшившийся в размерез
+```
+zfs rollback datapool@snap1
+md5sum -c fSum.md5
+```
+![""](https://github.com/mus-cat/otus-study-m1l3/blob/main/21.revertSnap.png)
